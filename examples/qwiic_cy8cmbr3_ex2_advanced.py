@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 #-------------------------------------------------------------------------------
-# qwiic_template_ex1_title.py TODO: replace template and title
+# qwiic_cy8cmbr3_ex2_advanced.py
 #
-# TODO: Add description for this example
+# Shows how to set up and use the Qwiic CY8CMBR3 Capacitive Soil Moisture Sensor
+# for advanced soil moisture readings including settings.
 #-------------------------------------------------------------------------------
-# Written by SparkFun Electronics, TODO: month and year
+# Written by SparkFun Electronics, January 2026
 #
 # This python library supports the SparkFun Electroncis Qwiic ecosystem
 #
@@ -12,7 +13,7 @@
 #
 # Do you like this library? Help support SparkFun. Buy a board!
 #===============================================================================
-# Copyright (c) 2024 SparkFun Electronics
+# Copyright (c) 2026 SparkFun Electronics
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy 
 # of this software and associated documentation files (the "Software"), to deal 
@@ -33,26 +34,62 @@
 # SOFTWARE.
 #===============================================================================
 
-import qwiic_template # TODO Import correct package
+import qwiic_cy8cmbr3
 import sys
+import time
 
 def runExample():
-	# TODO Replace template and title
-	print("\nQwiic Template Example 1 - Title\n")
+	print("\nQwiic Template Example 2 - Advanced\n")
 
 	# Create instance of device
-	myDevice = qwiic_template.QwiicTemplate() # TODO update as needed
+	mySoilSensor = qwiic_cy8cmbr3.QwiicCY8CMBR3()
 
 	# Check if it's connected
-	if myDevice.is_connected() == False:
+	if mySoilSensor.is_connected() == False:
 		print("The device isn't connected to the system. Please check your connection", \
 			file=sys.stderr)
 		return
 
 	# Initialize the device
-	myDevice.begin()
+	mySoilSensor.begin()
 
-	# TODO Add basic example code
+	# Sensitivity values (counts per pF)
+    # kCsSensitivity500CountsPerPf = 0  # 50 counts/0.1pF
+    # kCsSensitivity250CountsPerPf = 1  # 50 counts/0.2pF
+    # kCsSensitivity167CountsPerPf = 2  # 50 counts/0.3pF
+    # kCsSensitivity125CountsPerPf = 3  # 50 counts/0.4pF
+	mySoilSensor.set_sensitivity_cs0(mySoilSensor.kCsSensitivity500CountsPerPf)
+
+	# Refresh Intervals
+	# See qwiic_cy8cmbr3.py for all options
+	mySoilSensor.set_refresh_interval(mySoilSensor.kRefreshInterval100ms)
+
+	# Infinite loop reading data
+	while True:
+		# Depending on your application, you may want to tune sensitity and refresh interval
+		# and you may find any of the following different ways of reading the capacitance counts
+		# most useful (balancing accuracy, range, and resolution).
+
+		# Read and print the soil capacitance
+		capacitance = mySoilSensor.get_capacitance_pf()
+		print("Soil Capacitance: " + str(capacitance) + " pF")
+		# Sleep for a second to avoid spamming the output
+		
+		# Raw count data
+		raw_counts = mySoilSensor.get_raw_count()
+		print("Soil Raw Count: " + str(raw_counts) + " counts")
+
+		# Baseline counts
+		base_counts = mySoilSensor.get_baseline_count()
+		print("Soil Baseline Count: " + str(base_counts) + " counts")
+
+		# Delta counts
+		delta_counts = mySoilSensor.get_diff_count()
+		print("Soil Delta Count: " + str(delta_counts) + " counts")
+		
+		time.sleep(1)
+
+
 
 if __name__ == '__main__':
 	try:
