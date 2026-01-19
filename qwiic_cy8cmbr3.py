@@ -203,6 +203,8 @@ class QwiicCY8CMBR3(object):
     # SENSOR_EN: Capacitive sensor enable/disable configuration.
     kSensorEnShiftCs0 = 0
     kSensorEnMaskCs0 = 0b01
+    kSensorEnShiftCs1 = 1
+    kSensorEnMaskCs1 = 0b10
 
     # TOGGLE_EN: GPO toggle enable/disable.
     kToggleEnShiftGpo0 = 0
@@ -226,6 +228,12 @@ class QwiicCY8CMBR3(object):
     kGpoCfgShiftGpo0ActiveState = 3
     kGpoCfgMaskGpo0ActiveState = 1 << kGpoCfgShiftGpo0ActiveState
 
+    # SPO_CFG: Special purpose output configuration
+    kSpoCfgShiftSpo0 = 0
+    kSpoCfgMaskSpo0 = 0b00000111
+    kSpoCfgShiftSpo1 = 4
+    kSpoCfgMaskSpo1 = 0b01110000
+
     # GPO_OUTPUT_STATE: GPO output state control
     kGpoOutputStateShiftGpo0 = 0
     kGpoOutputStateMaskGpo0 = 0b01
@@ -233,6 +241,14 @@ class QwiicCY8CMBR3(object):
     # GPO_DATA: Current GPO state values
     kGpoDataShiftGpo0 = 0
     kGpoDataMaskGpo0 = 0b01
+
+    # Auto-Reset Enable
+    kAutoResetShiftButtonSldArst = 4
+    kAutoResetMaskButtonSldArst = 0b11 << kAutoResetShiftButtonSldArst
+
+    kAutoResetShiftProximityArst = 6
+    kAutoResetMaskProximityArst = 0b11 << kAutoResetShiftProximityArst
+
 
     # Value Variables 
     # IDs
@@ -272,6 +288,21 @@ class QwiicCY8CMBR3(object):
     kRefreshInterval460ms = 23
     kRefreshInterval480ms = 24
     kRefreshInterval500ms = 25
+
+    # Auto Reset Timeouts
+    kAutoResetTimeoutDisabled = 0
+    kAutoResetTimeout5Seconds = 1
+    kAutoResetTimeout20Seconds = 2
+
+    # Commands
+    kCtrlCmdNoOp = 0
+    kCtrlCmdSaveConfig = 2
+    kCtrlCmdCalcCrc = 3
+    kCtrlCmdDeepSleep = 7
+    kCtrlCmdResetLatch = 8
+    kCtrlCmdAlpResetPs0 = 9
+    kCtrlCmdAlpResetPs1 = 10
+    kCtrlCmdSwReset = 255
     
     def __init__(self, address=None, i2c_driver=None, enableDebug=False):
         """
@@ -300,8 +331,6 @@ class QwiicCY8CMBR3(object):
         else:
             self._i2c = i2c_driver
 
-        # TODO: Initialize any variables used by this driver
-
     def is_connected(self):
         """
         Determines if this device is connected
@@ -309,10 +338,6 @@ class QwiicCY8CMBR3(object):
         :return: `True` if connected, otherwise `False`
         :rtype: bool
         """
-        # Check if connected by seeing if an ACK is received
-        if not self._i2c.isDeviceConnected(self.address):
-            return False
-        
         # Check ID registers to confirm connected
         family_id = self.get_family_id()
         device_id = self.get_device_id()
@@ -335,7 +360,10 @@ class QwiicCY8CMBR3(object):
         if not self.is_connected():
             return False
         
-        if not self.enable_cs0(True):
+        if not self.enable(0, True):
+            return False
+
+        if not self.enable(1, False):
             return False
         
         if not self.set_sensitivity_cs0(self.kCsSensitivity500CountsPerPf):
@@ -343,8 +371,21 @@ class QwiicCY8CMBR3(object):
 
         if not self.set_refresh_interval(self.kRefreshInterval100ms):
             return False
+        
+        if not self.set_spo0_config(0):  # Disable SPO0
+            return False
 
-        if not self.set_gpo_config(controlByHost=True, pwmOutput=False, strongDrive=False, activeHigh=False):
+        if not self.set_gpo_config(controlByHost=True, pwmOutput=False, strongDrive=True, activeHigh=False):
+            return False
+        
+        if not self.set_auto_reset_enable():
+            return False
+        
+        # Save the configuration to non-volatile memory and reset
+        if not self.save_config():
+            return False
+    
+        if not self.reset():
             return False
 
         if not self.led_off():
@@ -379,27 +420,98 @@ class QwiicCY8CMBR3(object):
         
         return device_id
     
-    def enable_cs0(self, enable=True):
+    def enable(self, cs = 0, enable=True):
         """
         Enables or disables the capacitive sensor 0 (CS0)
+
+        :param cs: The capacitive sensor number (only 0 and 1 are supported)
 
         :param enable: If `True`, enables CS0
             If `False`, disables CS0
 
         :return: Returns `True` if successful, otherwise `False`
         """
-        sensorEnVal = self._i2c.read_byte(self.address, self.kRegSensorEn)
+        sensorEnVal = self._read_word_with_retry(self.kRegSensorEn)
 
-        if enable:
-            sensorEnVal |= self.kSensorEnMaskCs0
+        if cs == 0:
+            # Configure CS0 enable/disable
+            if enable:
+                sensorEnVal |= self.kSensorEnMaskCs0
+            else:
+                sensorEnVal &= ~self.kSensorEnMaskCs0
+        
+        elif cs == 1:
+            # Configure CS1 enable/disable
+            if enable:
+                sensorEnVal |= self.kSensorEnMaskCs1
+            else:
+                sensorEnVal &= ~self.kSensorEnMaskCs1
+        
         else:
-            sensorEnVal &= ~self.kSensorEnMaskCs0
+            self.debug_print("Invalid capacitive sensor number.")
+            return False  # Invalid capacitive sensor number
 
         # Write the sensor enable value to the SENSOR_EN register
-        self._i2c.write_byte(self.address, self.kRegSensorEn, sensorEnVal)
+        self._write_word_with_retry(self.kRegSensorEn, sensorEnVal)
 
         return True
-    
+
+    def set_auto_reset_enable(self, enable=True, timeout=kAutoResetTimeout5Seconds):
+        """
+        Enables or disables the auto-reset feature for buttons and sliders
+
+        :param enable: If `True`, enables auto-reset
+            If `False`, disables auto-reset
+        :param timeout: The auto-reset timeout to set
+            Use one of the kAutoResetTimeout* constants defined in this class
+        :return: Returns `True` if successful, otherwise `False`
+        """
+        # Ensure valid inputs
+        if timeout < self.kAutoResetTimeoutDisabled or timeout > self.kAutoResetTimeout20Seconds:
+            self.debug_print("Invalid auto-reset timeout value.")
+            return False  # Invalid auto-reset timeout value
+        
+        deviceCfg2Val = self._read_byte_with_retry(self.kRegDeviceCfg2)
+
+        if enable:
+            deviceCfg2Val &= ~self.kAutoResetMaskProximityArst
+            deviceCfg2Val |= (timeout << self.kAutoResetShiftProximityArst) & self.kAutoResetMaskProximityArst
+
+            deviceCfg2Val &= ~self.kAutoResetMaskButtonSldArst
+            deviceCfg2Val |= (timeout << self.kAutoResetShiftButtonSldArst) & self.kAutoResetMaskButtonSldArst
+        else:
+            deviceCfg2Val &= ~self.kAutoResetMaskProximityArst
+            deviceCfg2Val |= (self.kAutoResetTimeoutDisabled << self.kAutoResetShiftProximityArst) & self.kAutoResetMaskProximityArst
+
+            deviceCfg2Val &= ~self.kAutoResetMaskButtonSldArst
+            deviceCfg2Val |= (self.kAutoResetTimeoutDisabled << self.kAutoResetShiftButtonSldArst) & self.kAutoResetMaskButtonSldArst
+
+        # Write the updated device configuration value back to the DEVICE_CFG2 register
+        self._write_byte_with_retry(self.kRegDeviceCfg2, deviceCfg2Val)
+
+        return True
+
+    def set_spo0_config(self, config):
+        """
+        Sets the SPO0 configuration
+
+        :param enable: If `True`, enables SPO0
+            If `False`, disables SPO0
+        :param mode: The SPO0 mode to set
+        :param threshold: The SPO0 threshold to set
+
+        :return: Returns `True` if successful, otherwise `False`
+        """
+        # Ensure valid inputs
+        spoCfgVal = self._read_byte_with_retry(self.kRegSpoCfg)
+        spoCfgVal &= ~self.kSpoCfgMaskSpo0
+        spoCfgVal |= (config << self.kSpoCfgShiftSpo0) & self.kSpoCfgMaskSpo0
+
+        # Write the SPO0 configuration to the device
+        self._write_byte_with_retry(self.kRegSpoCfg, spoCfgVal)
+
+        return True
+
     def set_sensitivity_cs0(self, sensitivity):
         """
         Sets the sensitivity for the capacitive sensor 0 (CS0)
@@ -414,7 +526,7 @@ class QwiicCY8CMBR3(object):
             return False  # Invalid sensitivity value
         
         # Read the current SENSITIVITY register value
-        sensVal = self._i2c.read_byte(self.address, self.kRegSensitivity0)
+        sensVal = self._read_byte_with_retry(self.kRegSensitivity0)
 
         # Clear the bits associated with the capacitive sensor
         sensVal &= ~self.kSensitivity0MaskCs0
@@ -423,7 +535,7 @@ class QwiicCY8CMBR3(object):
         sensVal |= (sensitivity << self.kSensitivity0ShiftCs0) & self.kSensitivity0MaskCs0
 
         # Write the updated sensitivity value back to the register
-        self._i2c.write_byte(self.address, self.kRegSensitivity0, sensVal)
+        self._write_byte_with_retry(self.kRegSensitivity0, sensVal)
 
         return True
     
@@ -441,7 +553,7 @@ class QwiicCY8CMBR3(object):
             return False  # Invalid refresh interval value
         
         # Write the refresh interval value to the REFRESH_CTRL register
-        self._i2c.write_byte(self.address, self.kRegRefreshCtrl, interval)
+        self._write_byte_with_retry(self.kRegRefreshCtrl, interval)
 
         return True
     
@@ -460,7 +572,7 @@ class QwiicCY8CMBR3(object):
 
         :return: Returns `True` if successful, otherwise `False`
         """
-        gpoCfgVal = self._i2c.read_byte(self.address, self.kRegGpoCfg)
+        gpoCfgVal = self._read_byte_with_retry(self.kRegGpoCfg)
 
         # Configure control by host/device
         if controlByHost:
@@ -487,7 +599,7 @@ class QwiicCY8CMBR3(object):
             gpoCfgVal &= ~self.kGpoCfgMaskGpo0ActiveState
        
         # Write the GPO configuration value to the GPO_CFG register
-        self._i2c.write_byte(self.address, self.kRegGpoCfg, gpoCfgVal)
+        self._write_byte_with_retry(self.kRegGpoCfg, gpoCfgVal)
 
         return True
     
@@ -500,7 +612,7 @@ class QwiicCY8CMBR3(object):
 
         :return: Returns `True` if successful, otherwise `False`
         """
-        gpoOutputVal = self._i2c.read_byte(self.address, self.kRegGpoOutputState)
+        gpoOutputVal = self._read_byte_with_retry(self.kRegGpoOutputState)
 
         if enable:
             gpoOutputVal |= self.kGpoOutputStateMaskGpo0
@@ -508,7 +620,7 @@ class QwiicCY8CMBR3(object):
             gpoOutputVal &= ~self.kGpoOutputStateMaskGpo0
 
         # Write the GPO output state value to the GPO_OUTPUT_STATE register
-        self._i2c.write_byte(self.address, self.kRegGpoOutputState, gpoOutputVal)
+        self._write_byte_with_retry(self.kRegGpoOutputState, gpoOutputVal)
 
         return True
     
@@ -529,7 +641,7 @@ class QwiicCY8CMBR3(object):
         :return: Returns `True` if successful, otherwise `False`
         """
         # Write the Sensor ID value to the SENSOR_ID register
-        self._i2c.write_byte(self.address, self.kRegSensorId, sensor_id)
+        self._write_byte_with_retry(self.kRegSensorId, sensor_id)
 
         return True
     
@@ -540,6 +652,15 @@ class QwiicCY8CMBR3(object):
         :return: The capacitance value in pF or 0 on error
         :rtype: float
         """
+        if not self.set_sensor_id(0):
+            return 0.0
+
+        # From datasheet 1.5.123 DEBUG_CP register (measurement is updated whenever there is a change in value of SENSOR_ID register)
+        # So, we'll first set the sensor ID to something else and then back to the desired sensorId to force an update.
+        if not self.set_sensor_id(1):
+            return 0.0
+        
+        # Now set it back to our target sensor (CS0)
         if not self.set_sensor_id(0):
             return 0.0
 
@@ -571,7 +692,7 @@ class QwiicCY8CMBR3(object):
         diffCount = self.get_diff_count()
 
         # Read the sensitivity setting for CS0
-        sensVal = self._i2c.read_byte(self.address, self.kRegSensitivity0)
+        sensVal = self._read_byte_with_retry(self.kRegSensitivity0)
         sensitivitySetting = (sensVal & self.kSensitivity0MaskCs0) >> self.kSensitivity0ShiftCs0
 
         # Map sensitivity setting to counts per pF
@@ -621,6 +742,165 @@ class QwiicCY8CMBR3(object):
         rawCount = self._i2c.read_word(self.address, self.kRegDebugRawCnt0)
 
         return rawCount
+    
+    def is_ctrl_command_complete(self):
+        """
+        Determines if the last control command has completed
+
+        :return: `True` if the last command is complete, otherwise `False`
+        :rtype: bool
+        """
+        ctrlCmd = self._read_with_retry(self.kRegCtrlCmd)
+
+        # If CTRL_CMD is 0, then the last command is complete
+        return (ctrlCmd == self.kCtrlCmdNoOp)
+    
+    def send_ctrl_command(self, command, waitForCompletion=True):
+        """
+        Sends a control command to the device
+
+        :param command: The control command to send
+        :param waitForCompletion: If `True`, waits for the command to complete
+
+        :return: Returns `True` if successful, otherwise `False`
+        :rtype: bool
+        """
+        # Write the command to the CTRL_CMD register
+        if not self._write_with_retry(self.kRegCtrlCmd, command):
+            self.debug_print(f"Failed to write control command to CTRL_CMD register: 0x{command:X}")
+            return False
+
+        if not waitForCompletion:
+            return True
+
+        # Wait for the command to complete
+        while not self.is_ctrl_command_complete():
+            pass  # Optionally, add a timeout here to avoid infinite loops
+
+        # Read the CTRL_CMD_ERR register to check for errors
+        ctrlCmdErr = self._read_with_retry(self.kRegCtrlCmdErr)
+        if ctrlCmdErr is None:
+            return False
+
+        if ctrlCmdErr != 0:  # Assuming 0 means no error
+            self.debug_print(f"Control Command Error: {ctrlCmdErr}")
+            return False
+
+        self.debug_print(f"Control Command 0x{command:X} executed successfully!")
+        return True  # Return true to indicate success
+    
+    def save_config(self):
+        """
+        Saves the current configuration to non-volatile memory
+
+        :return: Returns `True` if successful, otherwise `False`
+        :rtype: bool
+        """
+        # Calculate the CRC (using the CALC_CRC register) for the current configuration and load it in the CONFIG_CRC register
+        if not self.send_ctrl_command(self.kCtrlCmdCalcCrc):
+            return False
+
+        # Read the calculated CRC from the CALC_CRC register
+        calcCrc = self._read_word_with_retry(self.kRegCalcCrc)
+        if calcCrc is None:
+            return False
+
+        # Write the calculated CRC to the CONFIG_CRC register
+        if not self._write_word_with_retry(self.kRegConfigCrc, calcCrc):
+            return False
+
+        # Send the SAVE_CONFIG command to save the current configuration to non-volatile memory
+        if not self.send_ctrl_command(self.kCtrlCmdSaveConfig):
+            return False
+
+        return True  # Return true to indicate success
+    
+    def reset(self, waitForCompletion=True):
+        """
+        Performs a software reset of the device
+
+        :param waitForCompletion: If `True`, waits for the reset to complete
+
+        :return: Returns `True` if successful, otherwise `False`
+        :rtype: bool
+        """
+        # Send the SW_RESET command to perform a software reset
+        if not self.send_ctrl_command(self.kCtrlCmdSwReset, waitForCompletion):
+            return False
+
+        return True  # Return true to indicate success
+
+    def _read_byte_with_retry(self, register, retries=5):
+        """
+        Reads a byte from the specified register with retry logic
+
+        :param register: The register address to read from
+        :param retries: The number of retry attempts
+
+        :return: The byte value read from the register or None on failure
+        :rtype: int or None
+        """
+        for attempt in range(retries):
+            try:
+                value = self._i2c.read_byte(self.address, register)
+                return value
+            except Exception as e:
+                self.debug_print(f"Read attempt {attempt + 1} failed: {e}")
+
+    def _read_word_with_retry(self, register, retries=5):
+        """
+        Reads a word from the specified register with retry logic
+
+        :param register: The register address to read from
+        :param retries: The number of retry attempts
+
+        :return: The word value read from the register or None on failure
+        :rtype: int or None
+        """
+        for attempt in range(retries):
+            try:
+                value = self._i2c.read_word(self.address, register)
+                return value
+            except Exception as e:
+                self.debug_print(f"Read word attempt {attempt + 1} failed: {e}")
+        
+    def _write_byte_with_retry(self, register, value, retries=5):
+        """
+        Writes a byte to the specified register with retry logic
+
+        :param register: The register address to write to
+        :param value: The byte value to write
+        :param retries: The number of retry attempts
+
+        :return: Returns `True` if successful, otherwise `False`
+        :rtype: bool
+        """
+        for attempt in range(retries):
+            try:
+                self._i2c.write_byte(self.address, register, value)
+                return True
+            except Exception as e:
+                self.debug_print(f"Write attempt {attempt + 1} failed: {e}")
+        return False
+    
+    def _write_word_with_retry(self, register, value, retries=5):
+        """
+        Writes a word to the specified register with retry logic
+
+        :param register: The register address to write to
+        :param value: The word value to write
+        :param retries: The number of retry attempts
+
+        :return: Returns `True` if successful, otherwise `False`
+        :rtype: bool
+        """
+        for attempt in range(retries):
+            try:
+                self._i2c.write_word(self.address, register, value)
+                return True
+            except Exception as e:
+                self.debug_print(f"Write word attempt {attempt + 1} failed: {e}")
+        return False
 
     def debug_print(self, str):
         """
