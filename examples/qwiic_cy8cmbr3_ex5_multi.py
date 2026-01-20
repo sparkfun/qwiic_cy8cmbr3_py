@@ -38,73 +38,45 @@ import qwiic_cy8cmbr3
 import sys
 import time
 
+# NOTE: Before running this example, ensure you have cut the pull-up traces on all but one of the sensors
+
 # Example I2C addresses for multiple sensors. You can set these addresses using the I2C
 # address example script (qwiic_cy8cmbr3_ex4_i2c_addr.py)
-addresses = [0x30, 0x31]
+addresses = [0x30, 0x31] # Add more addresses as needed
 
 def runExample():
 	print("\nQwiic Template Example 5 - Multiple Sensors\n")
 
-	sensor0 = qwiic_cy8cmbr3.QwiicCY8CMBR3(address=addresses[0])
-	sensor1 = qwiic_cy8cmbr3.QwiicCY8CMBR3(address=addresses[1])
+	sensors = []
 
-	# check if each sensor is connected
-	if sensor0.is_connected() == False:
-		print("The device at address " + hex(sensor0.address) + " isn't connected to the system. Please check your connection", \
-			file=sys.stderr)
-		print("Make sure you have already set the I2C address correctly for each sensor with the address example script (qwiic_cy8cmbr3_ex4_i2c_addr.py)", \
-			file=sys.stderr)
-		return
-	
-	if sensor1.is_connected() == False:
-		print("The device at address " + hex(sensor1.address) + " isn't connected to the system. Please check your connection",
-			file=sys.stderr)
-		print("Make sure you have already set the I2C address correctly for each sensor with the address example script (qwiic_cy8cmbr3_ex4_i2c_addr.py)",
-			file=sys.stderr)
-		return
-	
-	# Initialize the devices
-	if not sensor0.begin():
-		print("Failed to initialize sensor at address: " + hex(sensor0.address), file=sys.stderr)
-		return
-	if not sensor1.begin():
-		print("Failed to initialize sensor at address: " + hex(sensor1.address), file=sys.stderr)
-		return
+	# Create a device instance for each address (Note the "address" parameter)
+	for addr in addresses:
+		sensors.append(qwiic_cy8cmbr3.QwiicCY8CMBR3(address=addr))
 
-	# sensors = []
+	# Check if each sensor is connected
+	for sensor in sensors:
+		if sensor.is_connected() == False:
+			print("The device at address " + hex(sensor.address) + " isn't connected to the system. Please check your connection", \
+				file=sys.stderr)
+			print("Make sure you have already set the I2C address correctly for each sensor with the address example script (qwiic_cy8cmbr3_ex4_i2c_addr.py)", \
+				file=sys.stderr)
+			return
 
-	# # Create a device instance for each address (Note the "address" parameter)
-	# for addr in addresses:
-	# 	sensors.append(qwiic_cy8cmbr3.QwiicCY8CMBR3(address=addr))
-	
-	# # Check if each sensor is connected
-	# for sensor in sensors:
-	# 	if sensor.is_connected() == False:
-	# 		print("The device at address " + hex(sensor.address) + " isn't connected to the system. Please check your connection", \
-	# 			file=sys.stderr)
-	# 		print("Make sure you have already set the I2C address correctly for each sensor with the address example script (qwiic_cy8cmbr3_ex4_i2c_addr.py)", \
-	# 			file=sys.stderr)
-	# 		return
-
-	# # Initialize the devices 
-	# for sensor in sensors:
-	# 	if not sensor.begin():
-	# 		print("Failed to initialize sensor at address: " + hex(sensor.address), file=sys.stderr)
-	# 		return
+	# Initialize the devices 
+	for sensor in sensors:
+		if not sensor.begin():
+			print("Failed to initialize sensor at address: " + hex(sensor.address), file=sys.stderr)
+			return
 
 	# Infinite loop reading data
 	while True:
-
-		# Read and print the soil capacitance from sensor 0
-		capacitance0 = sensor0.get_capacitance_pf()
-		print("Sensor 0x" + hex(sensor0.address) + " Soil Capacitance: " + str(capacitance0) + " pF")
-		# Read and print the soil capacitance from sensor 1
-		capacitance1 = sensor1.get_capacitance_pf()
-		print("Sensor 0x" + hex(sensor1.address) + " Soil Capacitance: " + str(capacitance1) + " pF\n")
 		# Read and print the soil capacitance from each sensor
-		# for sensor in sensors:
-		# 	capacitance = sensor.get_capacitance_pf()
-		# 	print("Sensor 0x" + hex(sensor.address) + " Soil Capacitance: " + str(capacitance) + " pF")
+		for sensor in sensors:
+			capacitance = sensor.get_capacitance_pf()
+			print("Sensor 0x" + hex(sensor.address) + " Soil Capacitance: " + str(capacitance) + " pF")
+		print("")  # Blank line between readings
+		# Sleep for a second to avoid spamming the output
+		time.sleep(1)
 
 if __name__ == '__main__':
 	try:
