@@ -55,7 +55,7 @@ _DEFAULT_NAME = "Qwiic CY8CMBR3"
 # Some devices have multiple available addresses - this is a list of these
 # addresses. NOTE: The first address in this list is considered the default I2C
 # address for the device.
-_AVAILABLE_I2C_ADDRESS = [0x39] 
+_AVAILABLE_I2C_ADDRESS = [0x37] 
 # Add the other allowable addresses (0x08 to 0x77) to the end of the list
 _AVAILABLE_I2C_ADDRESS.extend(list(range(0x08, 0x78)))
 
@@ -315,6 +315,7 @@ class QwiicCY8CMBR3(object):
             If not provided, a driver object is created
         :type i2c_driver: I2CDriver, optional
         """
+        self.enableDebug = enableDebug
 
         # Use address if provided, otherwise pick the default
         if address in self.available_addresses:
@@ -372,7 +373,7 @@ class QwiicCY8CMBR3(object):
         if not self.set_refresh_interval(self.kRefreshInterval100ms):
             return False
         
-        if not self.set_spo0_config(0):  # Disable SPO0
+        if not self.set_spo0_config(5):  # Set as GPO0
             return False
 
         if not self.set_gpo_config(controlByHost=True, pwmOutput=False, strongDrive=True, activeHigh=False):
@@ -404,7 +405,7 @@ class QwiicCY8CMBR3(object):
         :rtype: int
         """
         # Read the Family ID register
-        family_id = self._i2c.read_byte(self.address, self.kRegFamilyId)
+        family_id = self._read_byte_with_retry(self.kRegFamilyId)
         
         return family_id
     
@@ -416,7 +417,7 @@ class QwiicCY8CMBR3(object):
         :rtype: int
         """
         # Read the Device ID register
-        device_id = self._i2c.read_word(self.address, self.kRegDeviceId)
+        device_id = self._read_word_with_retry(self.kRegDeviceId)
         
         return device_id
     
@@ -615,9 +616,9 @@ class QwiicCY8CMBR3(object):
         gpoOutputVal = self._read_byte_with_retry(self.kRegGpoOutputState)
 
         if enable:
-            gpoOutputVal |= self.kGpoOutputStateMaskGpo0
+            gpoOutputVal &= ~self.kGpoOutputStateMaskGpo0  # Active low
         else:
-            gpoOutputVal &= ~self.kGpoOutputStateMaskGpo0
+            gpoOutputVal |= self.kGpoOutputStateMaskGpo0
 
         # Write the GPO output state value to the GPO_OUTPUT_STATE register
         self._write_byte_with_retry(self.kRegGpoOutputState, gpoOutputVal)
@@ -632,6 +633,18 @@ class QwiicCY8CMBR3(object):
         """
         return self.led_on(False)
     
+    def get_debug_sensor_id(self):
+        """
+        Reads and returns the Debug Sensor ID register
+
+        :return: The Debug Sensor ID value
+        :rtype: int
+        """
+        # Read the Debug Sensor ID register
+        debugSensorId = self._read_byte_with_retry(self.kRegDebugSensorId)
+        
+        return debugSensorId
+    
     def set_sensor_id(self, sensor_id=0):
         """
         Sets the Sensor ID register
@@ -643,6 +656,10 @@ class QwiicCY8CMBR3(object):
         # Write the Sensor ID value to the SENSOR_ID register
         self._write_byte_with_retry(self.kRegSensorId, sensor_id)
 
+        # Wait until the debug sensor ID matches the set sensor ID
+        while (self.get_debug_sensor_id() != sensor_id):
+            pass  # Optionally, add a timeout here to avoid infinite loops
+
         return True
     
     def get_capacitance_pf(self):
@@ -652,9 +669,6 @@ class QwiicCY8CMBR3(object):
         :return: The capacitance value in pF or 0 on error
         :rtype: float
         """
-        if not self.set_sensor_id(0):
-            return 0.0
-
         # From datasheet 1.5.123 DEBUG_CP register (measurement is updated whenever there is a change in value of SENSOR_ID register)
         # So, we'll first set the sensor ID to something else and then back to the desired sensorId to force an update.
         if not self.set_sensor_id(1):
@@ -665,7 +679,7 @@ class QwiicCY8CMBR3(object):
             return 0.0
 
         # Read the capacitance value from the DebugCp register
-        capacitancePf = self._i2c.read_word(self.address, self.kRegDebugCp)
+        capacitancePf = self._read_byte_with_retry(self.kRegDebugCp)
 
         return capacitancePf
 
@@ -677,7 +691,7 @@ class QwiicCY8CMBR3(object):
         :rtype: int
         """
         # Read the difference count value from the DIFF_CNT0 register
-        diffCount = self._i2c.read_word(self.address, self.kRegDiffCnt0)
+        diffCount = self._read_word_with_retry(self.kRegDiffCnt0)
 
         return diffCount
     
@@ -724,7 +738,7 @@ class QwiicCY8CMBR3(object):
             return 0
 
         # Read the baseline count value from the DebugBaseline0 register
-        baselineCount = self._i2c.read_word(self.address, self.kRegDebugBaseline0)
+        baselineCount = self._read_word_with_retry(self.kRegDebugBaseline0)
 
         return baselineCount
     
@@ -739,7 +753,7 @@ class QwiicCY8CMBR3(object):
             return 0
 
         # Read the raw count value from the DebugRawCnt0 register
-        rawCount = self._i2c.read_word(self.address, self.kRegDebugRawCnt0)
+        rawCount = self._read_word_with_retry(self.kRegDebugRawCnt0)
 
         return rawCount
     
@@ -750,7 +764,7 @@ class QwiicCY8CMBR3(object):
         :return: `True` if the last command is complete, otherwise `False`
         :rtype: bool
         """
-        ctrlCmd = self._read_with_retry(self.kRegCtrlCmd)
+        ctrlCmd = self._read_byte_with_retry(self.kRegCtrlCmd)
 
         # If CTRL_CMD is 0, then the last command is complete
         return (ctrlCmd == self.kCtrlCmdNoOp)
@@ -766,7 +780,7 @@ class QwiicCY8CMBR3(object):
         :rtype: bool
         """
         # Write the command to the CTRL_CMD register
-        if not self._write_with_retry(self.kRegCtrlCmd, command):
+        if not self._write_byte_with_retry(self.kRegCtrlCmd, command):
             self.debug_print(f"Failed to write control command to CTRL_CMD register: 0x{command:X}")
             return False
 
@@ -778,7 +792,7 @@ class QwiicCY8CMBR3(object):
             pass  # Optionally, add a timeout here to avoid infinite loops
 
         # Read the CTRL_CMD_ERR register to check for errors
-        ctrlCmdErr = self._read_with_retry(self.kRegCtrlCmdErr)
+        ctrlCmdErr = self._read_byte_with_retry(self.kRegCtrlCmdErr)
         if ctrlCmdErr is None:
             return False
 
@@ -910,7 +924,3 @@ class QwiicCY8CMBR3(object):
         """
         if self.enableDebug:
             print("QwiicCY8CMBR3: " + str)
-
-    
-
-
