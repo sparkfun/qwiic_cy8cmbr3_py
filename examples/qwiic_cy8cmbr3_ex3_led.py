@@ -39,7 +39,7 @@ import sys
 import time
 
 # Define soil moisture threshold for LED control
-threshold = 300  # Example threshold for dry soil
+threshold = 8 # Example threshold for dry soil
 
 def runExample():
 	print("\nQwiic Template Example 3 - LED Control\n")
@@ -61,11 +61,14 @@ def runExample():
 		# Read and print the soil capacitance
 		capacitance = mySoilSensor.get_capacitance_pf()
 		print("Soil Capacitance: " + str(capacitance) + " pF")
+		print("Threshold: " + str(threshold) + " pF")
 		# Control LED based on soil moisture threshold
 		if capacitance < threshold:
-			mySoilSensor.set_led_state(True)  # Turn LED on for dry soil
+			mySoilSensor.led_on()  # Turn LED on for dry soil
+			print("LED ON - Capacitance below threshold\n")
 		else:
-			mySoilSensor.set_led_state(False)  # Turn LED off for moist soil
+			mySoilSensor.led_off()  # Turn LED off for moist soil
+			print("LED OFF - Capacitance above threshold\n")
 		# Sleep for a second to avoid spamming the output
 		time.sleep(1)
 

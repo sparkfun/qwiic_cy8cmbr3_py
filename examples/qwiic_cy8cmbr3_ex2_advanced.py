@@ -64,6 +64,10 @@ def runExample():
 	# See qwiic_cy8cmbr3.py for all options
 	mySoilSensor.set_refresh_interval(mySoilSensor.kRefreshInterval100ms)
 
+	mySoilSensor.save_config()
+
+	mySoilSensor.reset()
+
 	# Infinite loop reading data
 	while True:
 		# Depending on your application, you may want to tune sensitity and refresh interval
@@ -87,6 +91,8 @@ def runExample():
 		delta_counts = mySoilSensor.get_diff_count()
 		print("Soil Delta Count: " + str(delta_counts) + " counts")
 		
+		print("\n--------------------------------\n")
+
 		time.sleep(1)
 
 

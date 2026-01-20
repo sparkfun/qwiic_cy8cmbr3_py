@@ -66,6 +66,7 @@ class QwiicCY8CMBR3(object):
     # Set default name and I2C address(es)
     device_name         = _DEFAULT_NAME
     available_addresses = _AVAILABLE_I2C_ADDRESS
+    default_address = _AVAILABLE_I2C_ADDRESS[0]
 
     # Register Map
     kRegSensorEn = 0x00
@@ -742,9 +743,41 @@ class QwiicCY8CMBR3(object):
 
         return baselineCount
     
-    def get_raw_count(self):
+    def check_saturation(self, rawCount):
+        """
+        Checks if the raw count value indicates saturation
+
+        :param rawCount: The raw count value to check
+
+        :return: `True` if saturated, otherwise `False`
+        :rtype: bool
+        """
+        # Read the current sensitivity setting for CS0
+        sensVal = self._read_byte_with_retry(self.kRegSensitivity0)
+        sensitivitySetting = (sensVal & self.kSensitivity0MaskCs0) >> self.kSensitivity0ShiftCs0
+
+        if sensitivitySetting == self.kCsSensitivity500CountsPerPf:
+            saturationThreshold = 4094
+        elif sensitivitySetting == self.kCsSensitivity250CountsPerPf:
+            saturationThreshold = 2046
+        elif sensitivitySetting == self.kCsSensitivity167CountsPerPf:
+            saturationThreshold = 1022
+        elif sensitivitySetting == self.kCsSensitivity125CountsPerPf:
+            saturationThreshold = 1022
+    
+        return rawCount == saturationThreshold
+    
+    def get_raw_count(self, autoCalibrate=False):
         """
         Reads and returns the raw count value from CS0
+
+        :param autoCalibrate: If `True`, performs auto-calibration if saturation is detected.
+
+        Note:
+        Do not touch the sensor while auto-calibration is occurring.
+        It will range the sensor to a very high capacitance value which will not
+        be recoverable by future auto-calibrations until the sensor is manually reset.
+        ONLY ENABLE IF AWARE OF THE CONSEQUENCES OF A SOFTWARE RESET!
 
         :return: The raw count value
         :rtype: int
@@ -754,6 +787,12 @@ class QwiicCY8CMBR3(object):
 
         # Read the raw count value from the DebugRawCnt0 register
         rawCount = self._read_word_with_retry(self.kRegDebugRawCnt0)
+
+        # If autocalibration is enabled, we'll call reset() if the raw count is at maximum (saturated)
+        if autoCalibrate:
+            if self.check_saturation(rawCount):
+                self.debug_print("Raw count saturated, performing software reset for auto-calibration.")
+                self.reset()
 
         return rawCount
     
@@ -826,6 +865,45 @@ class QwiicCY8CMBR3(object):
         # Send the SAVE_CONFIG command to save the current configuration to non-volatile memory
         if not self.send_ctrl_command(self.kCtrlCmdSaveConfig):
             return False
+
+        return True  # Return true to indicate success
+    
+    def set_i2c_address(self, new_address):
+        """
+        Sets a new I2C address for the device
+
+        :param new_address: The new I2C address to set
+
+        :return: Returns `True` if successful, otherwise `False`
+        :rtype: bool
+        """
+        if new_address not in self.available_addresses:
+            self.debug_print("Invalid I2C address.")
+            return False  # Invalid I2C address
+
+        # Write the new I2C address to the I2C_ADDR register
+        if not self._write_byte_with_retry(self.kRegI2cAddr, new_address):
+            return False
+
+        # Save the configuration to non-volatile memory
+        if not self.save_config():
+            return False
+        
+        # Reset but do not wait for completion as the address will change directly after
+        if not self.reset(waitForCompletion=False):
+            return False
+
+        # Update the instance's address to the new address
+        self.address = new_address
+
+        # wait for the command to complete on the new address
+        completionRetries = 10
+        from time import sleep
+        while completionRetries > 0:
+            if self.is_ctrl_command_complete():
+                break
+            completionRetries -= 1
+            sleep(0.1)  # Small delay before retrying
 
         return True  # Return true to indicate success
     
