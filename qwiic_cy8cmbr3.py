@@ -33,7 +33,7 @@
 # SOFTWARE.
 #===============================================================================
 
-"""
+"""!
 qwiic_cy8cmbr3
 ============
 Python module for the [SparkFun Qwiic Capacitive Soil Moisture Sensor](https://www.sparkfun.com/products/TODO)
@@ -306,15 +306,13 @@ class QwiicCY8CMBR3(object):
     kCtrlCmdSwReset = 255
     
     def __init__(self, address=None, i2c_driver=None, enableDebug=False):
-        """
+        """!
         Constructor
 
-        :param address: The I2C address to use for the device
+        @param int, optional address: The I2C address to use for the device
             If not provided, the default address is used
-        :type address: int, optional
-        :param i2c_driver: An existing i2c driver object
+        @param I2CDriver, optional i2c_driver: An existing i2c driver object
             If not provided, a driver object is created
-        :type i2c_driver: I2CDriver, optional
         """
         self.enableDebug = enableDebug
 
@@ -334,11 +332,10 @@ class QwiicCY8CMBR3(object):
             self._i2c = i2c_driver
 
     def is_connected(self):
-        """
+        """!
         Determines if this device is connected
 
-        :return: `True` if connected, otherwise `False`
-        :rtype: bool
+        @return **bool** `True` if connected, otherwise `False`
         """
         # Check ID registers to confirm connected
         family_id = self.get_family_id()
@@ -352,11 +349,10 @@ class QwiicCY8CMBR3(object):
     connected = property(is_connected)
 
     def begin(self):
-        """
+        """!
         Initializes this device with default parameters
 
-        :return: Returns `True` if successful, otherwise `False`
-        :rtype: bool
+        @return **bool** Returns `True` if successful, otherwise `False`
         """
         # Confirm device is connected before doing anything
         if not self.is_connected():
@@ -399,11 +395,10 @@ class QwiicCY8CMBR3(object):
         return True
 
     def get_family_id(self):
-        """
+        """!
         Reads and returns the Family ID register
 
-        :return: The Family ID value
-        :rtype: int
+        @return **int** The Family ID value
         """
         # Read the Family ID register
         family_id = self._read_byte_with_retry(self.kRegFamilyId)
@@ -411,11 +406,10 @@ class QwiicCY8CMBR3(object):
         return family_id
     
     def get_device_id(self):
-        """
+        """!
         Reads and returns the Device ID register
 
-        :return: The Device ID value
-        :rtype: int
+        @return **int** The Device ID value
         """
         # Read the Device ID register
         device_id = self._read_word_with_retry(self.kRegDeviceId)
@@ -423,15 +417,14 @@ class QwiicCY8CMBR3(object):
         return device_id
     
     def enable(self, cs = 0, enable=True):
-        """
+        """!
         Enables or disables the capacitive sensor 0 (CS0)
 
-        :param cs: The capacitive sensor number (only 0 and 1 are supported)
-
-        :param enable: If `True`, enables CS0
+        @param cs: The capacitive sensor number (only 0 and 1 are supported)
+        @param enable: If `True`, enables CS0
             If `False`, disables CS0
 
-        :return: Returns `True` if successful, otherwise `False`
+        @return Returns `True` if successful, otherwise `False`
         """
         sensorEnVal = self._read_word_with_retry(self.kRegSensorEn)
 
@@ -459,14 +452,15 @@ class QwiicCY8CMBR3(object):
         return True
 
     def set_auto_reset_enable(self, enable=True, timeout=kAutoResetTimeout5Seconds):
-        """
+        """!
         Enables or disables the auto-reset feature for buttons and sliders
 
-        :param enable: If `True`, enables auto-reset
+        @param enable: If `True`, enables auto-reset
             If `False`, disables auto-reset
-        :param timeout: The auto-reset timeout to set
+        @param timeout: The auto-reset timeout to set
             Use one of the kAutoResetTimeout* constants defined in this class
-        :return: Returns `True` if successful, otherwise `False`
+
+        @return Returns `True` if successful, otherwise `False`
         """
         # Ensure valid inputs
         if timeout < self.kAutoResetTimeoutDisabled or timeout > self.kAutoResetTimeout20Seconds:
@@ -494,15 +488,15 @@ class QwiicCY8CMBR3(object):
         return True
 
     def set_spo0_config(self, config):
-        """
+        """!
         Sets the SPO0 configuration
 
-        :param enable: If `True`, enables SPO0
+        @param enable: If `True`, enables SPO0
             If `False`, disables SPO0
-        :param mode: The SPO0 mode to set
-        :param threshold: The SPO0 threshold to set
+        @param mode: The SPO0 mode to set
+        @param threshold: The SPO0 threshold to set
 
-        :return: Returns `True` if successful, otherwise `False`
+        @return Returns `True` if successful, otherwise `False`
         """
         # Ensure valid inputs
         spoCfgVal = self._read_byte_with_retry(self.kRegSpoCfg)
@@ -515,13 +509,13 @@ class QwiicCY8CMBR3(object):
         return True
 
     def set_sensitivity_cs0(self, sensitivity):
-        """
+        """!
         Sets the sensitivity for the capacitive sensor 0 (CS0)
 
-        :param sensitivity: The sensitivity value to set
+        @param sensitivity: The sensitivity value to set
             Use one of the kCsSensitivity* constants defined in this class
 
-        :return: Returns `True` if successful, otherwise `False`
+        @return Returns `True` if successful, otherwise `False`
         """
         if sensitivity < self.kCsSensitivity500CountsPerPf or sensitivity > self.kCsSensitivity125CountsPerPf:
             self.debug_print("Invalid sensitivity value.")
@@ -542,13 +536,13 @@ class QwiicCY8CMBR3(object):
         return True
     
     def set_refresh_interval(self, interval):
-        """
+        """!
         Sets the refresh interval for the capacitive sensor
 
-        :param interval: The refresh interval value to set
+        @param interval: The refresh interval value to set
             Use one of the kRefreshInterval* constants defined in this class
 
-        :return: Returns `True` if successful, otherwise `False`
+        @return Returns `True` if successful, otherwise `False`
         """
         if interval < self.kRefreshInterval20ms or interval > self.kRefreshInterval500ms:
             self.debug_print("Invalid refresh interval value.")
@@ -560,19 +554,19 @@ class QwiicCY8CMBR3(object):
         return True
     
     def set_gpo_config(self, controlByHost, pwmOutput, strongDrive, activeHigh):
-        """
+        """!
         Configures the GPO0 settings
 
-        :param controlByHost: If `True`, GPO0 is controlled by the host
+        @param controlByHost: If `True`, GPO0 is controlled by the host
             If `False`, GPO0 is controlled by the device
-        :param pwmOutput: If `True`, GPO0 outputs PWM signal
+        @param pwmOutput: If `True`, GPO0 outputs PWM signal
             If `False`, GPO0 outputs digital signal
-        :param strongDrive: If `True`, GPO0 uses strong drive mode
+        @param strongDrive: If `True`, GPO0 uses strong drive mode
             If `False`, GPO0 uses weak drive mode
-        :param activeHigh: If `True`, GPO0 is active high
+        @param activeHigh: If `True`, GPO0 is active high
             If `False`, GPO0 is active low
 
-        :return: Returns `True` if successful, otherwise `False`
+        @return Returns `True` if successful, otherwise `False`
         """
         gpoCfgVal = self._read_byte_with_retry(self.kRegGpoCfg)
 
@@ -606,13 +600,13 @@ class QwiicCY8CMBR3(object):
         return True
     
     def led_on(self, enable=True):
-        """
+        """!
         Sets the GPO0 output state to turn on/off an LED
 
-        :param enable: If `True`, turns on the LED
+        @param enable: If `True`, turns on the LED
             If `False`, turns off the LED
 
-        :return: Returns `True` if successful, otherwise `False`
+        @return Returns `True` if successful, otherwise `False`
         """
         gpoOutputVal = self._read_byte_with_retry(self.kRegGpoOutputState)
 
@@ -627,19 +621,18 @@ class QwiicCY8CMBR3(object):
         return True
     
     def led_off(self):
-        """
+        """!
         Turns off the LED connected to GPO0
 
-        :return: Returns `True` if successful, otherwise `False`
+        @return Returns `True` if successful, otherwise `False`
         """
         return self.led_on(False)
     
     def get_debug_sensor_id(self):
-        """
+        """!
         Reads and returns the Debug Sensor ID register
 
-        :return: The Debug Sensor ID value
-        :rtype: int
+        @return **int** The Debug Sensor ID value
         """
         # Read the Debug Sensor ID register
         debugSensorId = self._read_byte_with_retry(self.kRegDebugSensorId)
@@ -647,12 +640,12 @@ class QwiicCY8CMBR3(object):
         return debugSensorId
     
     def set_sensor_id(self, sensor_id=0):
-        """
+        """!
         Sets the Sensor ID register
 
-        :param sensor_id: The Sensor ID value to set
+        @param sensor_id: The Sensor ID value to set
 
-        :return: Returns `True` if successful, otherwise `False`
+        @return Returns `True` if successful, otherwise `False`
         """
         # Write the Sensor ID value to the SENSOR_ID register
         self._write_byte_with_retry(self.kRegSensorId, sensor_id)
@@ -664,11 +657,10 @@ class QwiicCY8CMBR3(object):
         return True
     
     def get_capacitance_pf(self):
-        """
+        """!
         Reads and returns the capacitance value from CS0 in picofarads (pF)
 
-        :return: The capacitance value in pF or 0 on error
-        :rtype: float
+        @return **float** The capacitance value in pF or 0 on error
         """
         # From datasheet 1.5.123 DEBUG_CP register (measurement is updated whenever there is a change in value of SENSOR_ID register)
         # So, we'll first set the sensor ID to something else and then back to the desired sensorId to force an update.
@@ -685,11 +677,10 @@ class QwiicCY8CMBR3(object):
         return capacitancePf
 
     def get_diff_count(self):
-        """
+        """!
         Reads and returns the difference count value from CS0
 
-        :return: The difference count value
-        :rtype: int
+        @return **int** The difference count value
         """
         # Read the difference count value from the DIFF_CNT0 register
         diffCount = self._read_word_with_retry(self.kRegDiffCnt0)
@@ -697,11 +688,10 @@ class QwiicCY8CMBR3(object):
         return diffCount
     
     def get_diff_pf(self):
-        """
+        """!
         Reads and returns the difference count value from CS0 in picofarads (pF)
 
-        :return: The difference count value in pF
-        :rtype: float
+        @return **float** The difference count value in pF
         """
         # Read the difference count value from the DIFF_CNT0 register
         diffCount = self.get_diff_count()
@@ -729,11 +719,10 @@ class QwiicCY8CMBR3(object):
         return capacitancePf
     
     def get_baseline_count(self):
-        """
+        """!
         Reads and returns the baseline count value from CS0
 
-        :return: The baseline count value
-        :rtype: int
+        @return **int** The baseline count value
         """
         if not self.set_sensor_id(0):
             return 0
@@ -744,13 +733,12 @@ class QwiicCY8CMBR3(object):
         return baselineCount
     
     def check_saturation(self, rawCount):
-        """
+        """!
         Checks if the raw count value indicates saturation
 
-        :param rawCount: The raw count value to check
+        @param rawCount: The raw count value to check
 
-        :return: `True` if saturated, otherwise `False`
-        :rtype: bool
+        @return **bool** `True` if saturated, otherwise `False`
         """
         # Read the current sensitivity setting for CS0
         sensVal = self._read_byte_with_retry(self.kRegSensitivity0)
@@ -768,10 +756,10 @@ class QwiicCY8CMBR3(object):
         return rawCount == saturationThreshold
     
     def get_raw_count(self, autoCalibrate=False):
-        """
+        """!
         Reads and returns the raw count value from CS0
 
-        :param autoCalibrate: If `True`, performs auto-calibration if saturation is detected.
+        @param autoCalibrate: If `True`, performs auto-calibration if saturation is detected.
 
         Note:
         Do not touch the sensor while auto-calibration is occurring.
@@ -779,8 +767,7 @@ class QwiicCY8CMBR3(object):
         be recoverable by future auto-calibrations until the sensor is manually reset.
         ONLY ENABLE IF AWARE OF THE CONSEQUENCES OF A SOFTWARE RESET!
 
-        :return: The raw count value
-        :rtype: int
+        @return **int** The raw count value
         """
         if not self.set_sensor_id(0):
             return 0
@@ -797,11 +784,10 @@ class QwiicCY8CMBR3(object):
         return rawCount
     
     def is_ctrl_command_complete(self):
-        """
+        """!
         Determines if the last control command has completed
 
-        :return: `True` if the last command is complete, otherwise `False`
-        :rtype: bool
+        @return **bool** `True` if the last command is complete, otherwise `False`
         """
         ctrlCmd = self._read_byte_with_retry(self.kRegCtrlCmd)
 
@@ -809,14 +795,13 @@ class QwiicCY8CMBR3(object):
         return (ctrlCmd == self.kCtrlCmdNoOp)
     
     def send_ctrl_command(self, command, waitForCompletion=True):
-        """
+        """!
         Sends a control command to the device
 
-        :param command: The control command to send
-        :param waitForCompletion: If `True`, waits for the command to complete
+        @param command: The control command to send
+        @param waitForCompletion: If `True`, waits for the command to complete
 
-        :return: Returns `True` if successful, otherwise `False`
-        :rtype: bool
+        @return **bool** Returns `True` if successful, otherwise `False`
         """
         # Write the command to the CTRL_CMD register
         if not self._write_byte_with_retry(self.kRegCtrlCmd, command):
@@ -843,11 +828,10 @@ class QwiicCY8CMBR3(object):
         return True  # Return true to indicate success
     
     def save_config(self):
-        """
+        """!
         Saves the current configuration to non-volatile memory
 
-        :return: Returns `True` if successful, otherwise `False`
-        :rtype: bool
+        @return **bool** Returns `True` if successful, otherwise `False`
         """
         # Calculate the CRC (using the CALC_CRC register) for the current configuration and load it in the CONFIG_CRC register
         if not self.send_ctrl_command(self.kCtrlCmdCalcCrc):
@@ -869,13 +853,12 @@ class QwiicCY8CMBR3(object):
         return True  # Return true to indicate success
     
     def set_i2c_address(self, new_address):
-        """
+        """!
         Sets a new I2C address for the device
 
-        :param new_address: The new I2C address to set
+        @param new_address: The new I2C address to set
 
-        :return: Returns `True` if successful, otherwise `False`
-        :rtype: bool
+        @return **bool** Returns `True` if successful, otherwise `False`
         """
         if new_address not in self.available_addresses:
             self.debug_print("Invalid I2C address.")
@@ -908,13 +891,12 @@ class QwiicCY8CMBR3(object):
         return True  # Return true to indicate success
     
     def reset(self, waitForCompletion=True):
-        """
+        """!
         Performs a software reset of the device
 
-        :param waitForCompletion: If `True`, waits for the reset to complete
+        @param waitForCompletion: If `True`, waits for the reset to complete
 
-        :return: Returns `True` if successful, otherwise `False`
-        :rtype: bool
+        @return **bool** Returns `True` if successful, otherwise `False`
         """
         # Send the SW_RESET command to perform a software reset
         if not self.send_ctrl_command(self.kCtrlCmdSwReset, waitForCompletion):
@@ -923,14 +905,13 @@ class QwiicCY8CMBR3(object):
         return True  # Return true to indicate success
 
     def _read_byte_with_retry(self, register, retries=5):
-        """
+        """!
         Reads a byte from the specified register with retry logic
 
-        :param register: The register address to read from
-        :param retries: The number of retry attempts
+        @param register: The register address to read from
+        @param retries: The number of retry attempts
 
-        :return: The byte value read from the register or None on failure
-        :rtype: int or None
+        @return **int or None** The byte value read from the register or None on failure
         """
         for attempt in range(retries):
             try:
@@ -940,14 +921,13 @@ class QwiicCY8CMBR3(object):
                 self.debug_print(f"Read attempt {attempt + 1} failed: {e}")
 
     def _read_word_with_retry(self, register, retries=5):
-        """
+        """!
         Reads a word from the specified register with retry logic
 
-        :param register: The register address to read from
-        :param retries: The number of retry attempts
+        @param register: The register address to read from
+        @param retries: The number of retry attempts
 
-        :return: The word value read from the register or None on failure
-        :rtype: int or None
+        @return **int or None** The word value read from the register or None on failure
         """
         for attempt in range(retries):
             try:
@@ -957,15 +937,14 @@ class QwiicCY8CMBR3(object):
                 self.debug_print(f"Read word attempt {attempt + 1} failed: {e}")
         
     def _write_byte_with_retry(self, register, value, retries=5):
-        """
+        """!
         Writes a byte to the specified register with retry logic
 
-        :param register: The register address to write to
-        :param value: The byte value to write
-        :param retries: The number of retry attempts
+        @param register: The register address to write to
+        @param value: The byte value to write
+        @param retries: The number of retry attempts
 
-        :return: Returns `True` if successful, otherwise `False`
-        :rtype: bool
+        @return **bool** Returns `True` if successful, otherwise `False`
         """
         for attempt in range(retries):
             try:
@@ -976,15 +955,14 @@ class QwiicCY8CMBR3(object):
         return False
     
     def _write_word_with_retry(self, register, value, retries=5):
-        """
+        """!
         Writes a word to the specified register with retry logic
 
-        :param register: The register address to write to
-        :param value: The word value to write
-        :param retries: The number of retry attempts
+        @param register: The register address to write to
+        @param value: The word value to write
+        @param retries: The number of retry attempts
 
-        :return: Returns `True` if successful, otherwise `False`
-        :rtype: bool
+        @return **bool** Returns `True` if successful, otherwise `False`
         """
         for attempt in range(retries):
             try:
@@ -995,10 +973,10 @@ class QwiicCY8CMBR3(object):
         return False
 
     def debug_print(self, str):
-        """
+        """!
         Prints debug information to the console if debugging is enabled
 
-        :param str: The string to print
+        @param str: The string to print
         """
         if self.enableDebug:
             print("QwiicCY8CMBR3: " + str)
