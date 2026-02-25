@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 #-------------------------------------------------------------------------------
-# qwiic_cy8cmbr3_ex6_calibration.py
+# qwiic_cy8cmbr3_ex6_set_range.py
 #
 # Shows how to set up and use the Qwiic CY8CMBR3 Capacitive Soil Moisture Sensor
-# for reading of raw counts with calibration options.
+# for reading of raw counts with range setting options.
 #-------------------------------------------------------------------------------
 # Written by SparkFun Electronics, January 2026
 #
@@ -40,7 +40,7 @@ import sys
 import time
 
 def runExample():
-	print("\nQwiic Template Example 6 - Calibration\n")
+	print("\nQwiic Template Example 6 - Set Range\n")
 
 	# Create instance of device
 	mySoilSensor = qwiic_cy8cmbr3.QwiicCY8CMBR3()
@@ -62,28 +62,28 @@ def runExample():
 	# the capacitance that it senses during power up/initialization. This allows it to maximize
 	# resolution for the expected capacitance range. However, if the capacitance changes significantly
 	# (for example, a moisture sensor going from dry to very wet), the raw count readings may saturate
-	# and get stuck at a maximum value. You can run reset() again to recalibrate the raw count range if needed.
+	# and get stuck at a maximum value. You can run reset() again to reconfigure the raw count range if needed.
 
-	# The calibration is volatile (it will be be recalibrated when power is removed from the sensor or the sensor is reset) 
+	# The range setting is volatile (it will be reset when power is removed from the sensor or the sensor is reset) 
 
 	prompting = True
-	autoCalibrate = False
+	autoRangeSet = False
 
 	# Infinite loop reading data
 	while True:
 		for i in range (5):
 			# Read and print the soil capacitance
-			# "raw" counts is what we're calibrating the range of, capacitance pF behaves the same regardless of calibration
+			# "raw" counts is what we're setting the range of, capacitance pF behaves the same regardless of range setting
 			capacitance = mySoilSensor.get_capacitance_pf()
 			print("Soil Capacitance: " + str(capacitance) + " pF")
 
-			# We can use the "autoCalibrate" feature of get_raw_count() to have the sensor
-			# automatically recalibrate the raw count range if it detects saturation.
+			# We can pass a boolean "True" value to get_raw_count() to have the sensor
+			# automatically adjust the raw count range if it detects saturation.
 
-			# Don't touch the active part of the sensor (the bottom with the ruler) while auto-calibration is enabled
-			# Or it will calibrate to a very high capacitance value, 
-			# and auto-calibration will be ineffective until a manual recalibration is done.
-			raw_counts = mySoilSensor.get_raw_count(autoCalibrate)
+			# Don't touch the active part of the sensor (the bottom with the ruler) while auto-range setting is enabled
+			# Or it will configure to a very high capacitance value, 
+			# and auto-range setting will be ineffective until a manual reconfiguration is done.
+			raw_counts = mySoilSensor.get_raw_count(autoRangeSet)
 			print("Soil Raw Counts: " + str(raw_counts) + " counts\n")
 
 			if mySoilSensor.check_saturation(raw_counts):
@@ -94,27 +94,27 @@ def runExample():
 		if prompting:
 			choice = input(
 				"\nSelect one of the following:\n"
-				"1) Manually Recalibrate\n"
-				"2) Continue for 5 more readings with current calibration\n"
-				"3) Turn on auto-calibration (Don't touch the sensor while this is enabled)\n"
-				"4) Turn off auto-calibration\n"
+				"1) Manually Reconfigure Range\n"
+				"2) Continue for 5 more readings with current range setting\n"
+				"3) Turn on auto-range setting (Don't touch the sensor while this is enabled)\n"
+				"4) Turn off auto-range setting\n"
 				"5) Do not prompt again\n"
 				"6) Exit\n\n"
 				"Enter choice (1, 2, 3, 4, 5, or 6): "
 			)
 			if choice == '1':
-				input("Place the sensor in the wettest possible state (i.e. soil fully saturated) and press Enter to recalibrate...")
-				print("Recalibrating sensor...")
+				input("Place the sensor in the wettest possible state (i.e. soil fully saturated) and press Enter to reconfigure the range...")
+				print("Reconfiguring sensor range...")
 				mySoilSensor.reset()
-				print("Recalibration complete.")
+				print("Range reconfiguration complete.")
 			elif choice == '2':
 				continue
 			elif choice == '3':
-				autoCalibrate = True
-				print("Auto-calibration enabled.")
+				autoRangeSet = True
+				print("Auto-range setting enabled.")
 			elif choice == '4':
-				autoCalibrate = False
-				print("Auto-calibration disabled.")
+				autoRangeSet = False
+				print("Auto-range setting disabled.")
 			elif choice == '5':
 				prompting = False
 				print("Prompting disabled.")
@@ -122,7 +122,7 @@ def runExample():
 				print("Exiting example.")
 				return
 			else:
-				print("Invalid choice. Continuing with current calibration.")
+				print("Invalid choice. Continuing with current range setting.")
 
 if __name__ == '__main__':
 	try:

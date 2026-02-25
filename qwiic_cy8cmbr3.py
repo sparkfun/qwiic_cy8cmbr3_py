@@ -2,7 +2,7 @@
 # qwiic_cy8cmbr3.py
 #
 # Python library for the SparkFun Qwiic Capacitive Soil Moisture Sensor, available here:
-# https://www.sparkfun.com/products/TODO
+# https://www.sparkfun.com/products/30480
 #-------------------------------------------------------------------------------
 # Written by SparkFun Electronics, January 2026
 #
@@ -36,7 +36,7 @@
 """!
 qwiic_cy8cmbr3
 ============
-Python module for the [SparkFun Qwiic Capacitive Soil Moisture Sensor](https://www.sparkfun.com/products/TODO)
+Python module for the [SparkFun Qwiic Capacitive Soil Moisture Sensor](https://www.sparkfun.com/products/30480)
 This is a port of the existing [Arduino Library](https://github.com/sparkfun/SparkFun_CY8CMBR3_Arduino_Library)
 This package can be used with the overall [SparkFun Qwiic Python Package](https://github.com/sparkfun/Qwiic_Py)
 New to Qwiic? Take a look at the entire [SparkFun Qwiic ecosystem](https://www.sparkfun.com/qwiic).

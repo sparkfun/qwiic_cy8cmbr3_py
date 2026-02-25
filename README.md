@@ -30,7 +30,7 @@ New to qwiic? Take a look at the entire [SparkFun qwiic ecosystem](https://www.s
 
 This Python package supports the following SparkFun qwiic products on Python, MicroPython and Circuit python. 
 
-* [SparkFun Soil Moisture Sensor Sensor - CY8CMBR3](https://www.sparkfun.com/products/TODO)
+* [SparkFun Soil Moisture Sensor Sensor - CY8CMBR3](https://www.sparkfun.com/products/30480)
 
 ### Supported Platforms
 
