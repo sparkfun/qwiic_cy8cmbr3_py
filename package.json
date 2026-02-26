@@ -1,9 +1,11 @@
 {
     "urls": [
-      ["qwiic_template.py", "github:sparkfun/Qwiic_Template_Py/qwiic_cy8cmbr3.py"]
-    ],
-    "deps": [
-      ["github:sparkfun/Qwiic_I2C_Py", "master"]
+      ["qwiic_cy8cmbr3_py_examples/qwiic_cy8cmbr3_ex1_basic.py", "github:sparkfun/qwiic_cy8cmbr3_py/examples/qwiic_cy8cmbr3_ex1_basic.py"],
+      ["qwiic_cy8cmbr3_py_examples/qwiic_cy8cmbr3_ex2_advanced.py", "github:sparkfun/qwiic_cy8cmbr3_py/examples/qwiic_cy8cmbr3_ex2_advanced.py"],
+      ["qwiic_cy8cmbr3_py_examples/qwiic_cy8cmbr3_ex3_led.py", "github:sparkfun/qwiic_cy8cmbr3_py/examples/qwiic_cy8cmbr3_ex3_led.py"],
+      ["qwiic_cy8cmbr3_py_examples/qwiic_cy8cmbr3_ex4_i2c_addr.py", "github:sparkfun/qwiic_cy8cmbr3_py/examples/qwiic_cy8cmbr3_ex4_i2c_addr.py"],
+      ["qwiic_cy8cmbr3_py_examples/qwiic_cy8cmbr3_ex5_multi.py", "github:sparkfun/qwiic_cy8cmbr3_py/examples/qwiic_cy8cmbr3_ex5_multi.py"],
+      ["qwiic_cy8cmbr3_py_examples/qwiic_cy8cmbr3_ex6_set_range.py", "github:sparkfun/qwiic_cy8cmbr3_py/examples/qwiic_cy8cmbr3_ex6_set_range.py"]
     ],
     "version": "1.0.0"
 }
