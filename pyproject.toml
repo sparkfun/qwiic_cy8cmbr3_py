@@ -43,7 +43,7 @@ classifiers=[
 keywords = ["electronics, maker"]
 
 [project.urls]
-homepage = "https://www.sparkfun.com/products/TODO"
+homepage = "https://www.sparkfun.com/sparkfun-qwiic-soil-moisture-sensor-capacitive.html"
 
 [tool.setuptools]
 py-modules = ["qwiic_cy8cmbr3"]
