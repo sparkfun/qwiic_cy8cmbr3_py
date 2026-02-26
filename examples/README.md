@@ -21,8 +21,8 @@ Shows how to change the I2C address of the Qwiic CY8CMBR3 Capacitive Soil Moistu
 ## Qwiic Cy8Cmbr3 Ex5 Multi
 Shows how to interact with multiple Qwiic CY8CMBR3 Capacitive Soil Moisture Sensors
 
-## Qwiic Cy8Cmbr3 Ex6 Calibration
+## Qwiic Cy8Cmbr3 Ex6 Set Range
 Shows how to set up and use the Qwiic CY8CMBR3 Capacitive Soil Moisture Sensor
- for reading of raw counts with calibration options.
+ for reading of raw counts with range setting options.
 
 
