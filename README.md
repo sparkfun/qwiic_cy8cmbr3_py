@@ -104,7 +104,7 @@ circup example qwiic_cy8cmbr3\qwiic_cy8cmbr3_ex2_advanced
 circup example qwiic_cy8cmbr3\qwiic_cy8cmbr3_ex3_led
 circup example qwiic_cy8cmbr3\qwiic_cy8cmbr3_ex4_i2c_addr
 circup example qwiic_cy8cmbr3\qwiic_cy8cmbr3_ex5_multi
-circup example qwiic_cy8cmbr3\qwiic_cy8cmbr3_ex6_calibration
+circup example qwiic_cy8cmbr3\qwiic_cy8cmbr3_ex6_set_range
 ```
 
 Example Use
